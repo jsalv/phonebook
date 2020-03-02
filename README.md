@@ -97,7 +97,7 @@ count (`size()`) and capacity (`capacity()`).
 
 On the other hand, any Openly Addressed Hash Table needs to have some common
 fields and functionality. They all need an array over `KVPair` instances. They
-all need to answer queries of size and capacity in $O(1)$. They can all
+all need to answer queries of size and capacity in $`O(1)`$. They can all
 benefit from an overriding of `toString()`, which we provide for you and is
 very useful for debugging[^1]. Therefore, this entire piece of common
 functionality can (and should) be packages in **one common place**, and this
@@ -147,13 +147,149 @@ If the answer to **both** of these questions is **no**, you are good, otherwise 
 
 ### Classes under `hashes`
 
+Besides the classes you have to implement, you are given the following classes
+under the package `hashes`:
+
+ * `CollisionResolver`: A simple `enum` which only contains four named fields,
+  disambiguating between the various collision resolution methods that you
+  will have to implement.
+ * `HashTable`: The top-level interface discussed in the previous two sections.
+ * `OpenAddressingHashTable`: The abstract class discussed in the previous two sections.
+
 ### Classes under `utils`
+
+The package `utils` will be *indispensable* to you. Here is a short description
+of what every class in the package does. Refer to the JavaDocs for a *complete*
+and *concrete* description of arguments, returns values, `Exceptions` thrown,
+etc. Without consulting the JavaDocs, you are **extremely likely to not be
+passing several tests.** For example, some of our tests expect that you will
+`throw` particular `Exception` instances in certain cases: The JavaDoc is your
+**only** guide in those situations! This list is just a **high-level**
+understanding of the methods.
+
+ * `KVPair`: An important abstraction for **Key-Value pairs**. Time and again
+   in this class, we have conveyed to you that we are assuming that the
+   *value* with which a particular (and unique) *key* is associated is what
+   we are *really* interested in, and the keys are only useful for somehow
+   organizing the potentially infinite set of values, such that we can insert,
+   search, and delete as efficiently as possible, taking into consideration
+   issues of cache locality, where our memory resides, how hard these K-V
+   stores are to implement, etc.
+   
+   `KVPair` implements exactly that: it is a simple class which encapsulates
+   **both** the key **and** the value into one place so that we can access
+   the value from the key in $`O(1)`$. In C/C++, we would probably have
+   replaced it with a `struct`.
+ * `KVPairList`: An explicitly coded linked list that holds `KVPair` instances.
+   It is only useful for `SeparateChainingHashTable`. If you are wondering why we opted
+   for coding an entirely new list instead of simply using one of Java's
+   several generic `List`s, refer to the FAQ at the end for an explanation of
+   how Java treats arrays of generic types, such as `KVPairList`. The short
+   answer is: **not well at all**.
+ * `KVPairListTests`: A simple unit testing library for `KVPairList`.
+ * `PrimeGenerator`: A *very* important **singleton** class which controls the
+   re-sizing parameters for **all** of your `HashTable` instances. In lecture,
+   we have discussed the importance of keeping the size of your hash table
+   to a *prime* number. This class helps us with that. In particular, you
+   should study the JavaDocs for `getNextPrime()` and `getPreviousPrime()`,
+   since you will certainly be using those methods for your own purposes.
+   Both of these methods run in *constant* time, since we have already stored
+   a large list of primes as a `static` shared field of the `PrimeGenerator`
+   class, and the various primes can be accessed by indexing into that field.
+ * `PrimeGeneratorTests`: A simple unit testing library for `PrimeGenerator`.
+ * `NoMorePrimesException`: A type of `RuntimeException` that `PrimeGenerator`
+   uses when it runs out of primes to provide to an application.
+ * `Probes`: Arguably
+   **the most important class for your testing and understanding**.
+   The most important operations of `HashTable` instances, which are `put`,
+   `get`, and `remove`, **all** return `Probes` instances. These instances
+   contain the *value* of a key that was inserted, sought, or deleted (`null`
+   in the case of a failure of any kind), and, crucially, the
+   **number of probes** that it took for the operation to succeed **or fail**.
+   In this way, we can determine if you have understood how the collision
+   resolution methods are supposed to work! Specifically, what the **length**
+   of a collision chain ought to be *dynamically*, during execution of the
+   code with successive operations on the same `HashTable` instance. A
+   reminder that even an
+   *immediately successful or unsuccessful insertion, deletion, or search*
+   **still** counts as one probe.
 
 ## Collision Resolution Methods
 
+Given that the number of keys to store (e.g. individual ATM transactions over
+the entire state of Maryland for a large bank organization) is **enormous**
+and the available space to store them in computer memory is *much* smaller,
+collisions are inevitable, even with an excellent hash function. It therefore
+becomes important to develop *collision resolution methods*, whose job is to
+determine how an insertion of a key that *collides* with an existing key is
+resolved.
+ 
 ### Separate Chaining
 
+The most natural collision resolution method that we examine is
+**Separate Chaining**. In your code, this collision resolution method
+corresponds to `SeparateChainingHashTable`. An example of this method can be
+seen in the figure below. Note that it is not **necessary** that we employ a
+linked list, or any list for that matter, for implementing the collision
+"chains". We could just as well use an AVL Tree, a Red-Black or B-Tree, or a
+SkipList! The benefit of using a linked list for our collision chains is that
+we can insert very fast (by adding to the front or, in this project, by adding
+to the back with a `tail` pointer). The drawback is that we have linear time
+for search, but with $`M`$ relatively large and a good hash function, we are
+hoping that the collision chains will, on average, have length $`\frac{n}{M}`$,
+which is still linear time but offers a favorable constant of $`\frac{1}{M}`$.
+
+![Separate Chaining example](img/separateChainingExample.png "An example of Separate Chaining collision resolution with integer keys.")
+
+As seen in the class hierarchy, `SeparateChainingHashTable` is the **only**
+class you have to implement which is **not** derived from
+`OpenAddressingHashTable`. This is intuitive: this method is the only one that
+stores keys outside the table. It is wasteful in terms of memory, though,
+since for a table of capacity $`c`$ we are spending $`4c`$ bytes (for 32-bit
+Java references). If $`c=1000000000`$, that is 4GB used just to *point* to the
+data that interests us! However, it is *very* easy to implement, it is *very*
+useful for estimating the quality of our hash function, and it is also very
+useful if we want to retrieve a pointer to a different container as our value
+(e.g. AVL Tree, a linked list, another hash...).
+
 ### Linear Probing
+
+Linear Probing (hereafter referred to as **LP**) is the oldest and simplest Open Addressing collision resolution method. It is a well-studied technique with some very attractive properties, first introduces and analyzed by Donald Knuth in 1963. An example of some insertions into a table that employs LP to store some **integers** is shown in the following figure. The hash function employed is a simple "modular" hash: $`h(i)=i \mod M`$.
+
+![Linear Probing example](img/linearProbingExample.png "An example of Linear Probing collision resolution")
+
+Every time a collision is encountered, the algorithm keeps going forward into
+the table, wrapping around when required, to find an appropriate place to
+insert the new key into. 19, 4, and 16 are inserted collision-free, paying the
+minimum of only one probe, but 6, 176, and 1714 will be inserted only after
+enduring two, three, and four probes respectively! Also note that this is the
+**maximum** number of insertions the hash table can accommodate before
+resizing; the next insertion is **guaranteed** to trigger a resizing of the
+table according to its resizing policy.
+
+We will now offer a mathematical formalization of how LP works. Suppose that
+our hash function is $`h(k)`$, where $`k`$ is some input key. Let also
+$`i\geq 1`$ be an integer that denotes the $`i^{th}`$ probe that we have had to
+endure during our search for an empty cell in the table. We select $`i\geq 1`$
+because, remember, the minimum number of probes is 1, even for an
+**unsuccessful search!** Assuming that our hash table employs LP, the
+following **memory allocation function** $`m_{lp}(k,i)`$, returns the
+*actual cell index* of the $`i^{th}`$ probe:
+
+```math
+m_{lp}(k,i) = (h(k)+(i-1)) \mod M
+```
+
+This means that LP will probe the following memory addresses in the original
+hash table:
+
+```math
+h(k)\mod M, (h(k)+1)\mod M,(h(k)+2)\mod M,(h(k)+3)\mod M,\ldots
+```
+
+which fits intuition. For example, in the hash table shown in the figure below, if we wanted to insert the key 22, we would have the **sequential** memory allocations: $`m_{lp}(22,1)=h(22)+(1-1)=22\mod 11=0`$, $`m_{lp}(22,2)=\cdots=1`$, and $`m_{lp}(22,3)=3`$.
+
+![Examples of memory allocations](img/lpMemoryAllocations.png "Examples of various memory allocations for two integer keys")
 
 ### Ordered Linear Probing
 
