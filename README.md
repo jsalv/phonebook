@@ -360,7 +360,107 @@ operation $`\mod M`$ does **not** fix the problems of $`h_{str}`$.
 
 ### Ordered Linear Probing
 
+There **is** something we can do to improve our fortune. Consider for a
+moment a search for "entropy" in the hash table above. Since we are humans
+and can immediately see the entirety of the table, we know that this search
+is *destined to fail*. But *how many probes* will the insertion algorithm need
+to determine this? It would need **six** probes (the final one hitting `null`
+in cell 9), and this is because of one collision with a fellow word that
+begins with an "e", followed by the existence of keys with a first character
+of "f", which did not even hash to the same position as us anyway! Not to
+mention that the "f"s pushed **gorilla** over and that made things even worse
+for us. If only we could make those keys "get out of the way" so we can
+*fail this search faster* and move on to operations not destined to fail!
+
+A simple modification of Linear Probing, **Ordered** Linear Probing (**OLP**
+for short) tries to achieve exactly this goal. It alleviates this problem by
+keeping the collision chains *ordered*. The way that this method works is as
+follows: consider that at some point in the collision resolution process that
+LP employs, the new key $`k'`$ encounters a key $`k`$ which has the property
+that $`k>k'`$ (**strictly** smaller). The comparison operator $`<`$ here is
+assumed to mean whatever "$`<`$" means for the provided key type: numerical
+comparison, alphabetical comparison, custom `compareTo()`, etc. Then, the
+algorithm will put $`k'`$ in the position of $`k`$ and continue the insertion
+*as if the key to be inserted is $`k`$!* Effectively, the insertion algorithm
+will keep going down the collision chain for an empty spot to put $`k`$ in. We
+are thus keeping the collision chain *ordered* **and** we do **not** break the
+search for $`k`$, since we still have a *contiguous cluster of collision chains*
+which allows the algorithm to **not** reach `null` before it finds $`k`$.
+
+The following figure shows an example of what the hash table depicted in the
+previous figure would look like if we had employed OLP instead of simple LP.
+We once again see that we have **not** alleviated the problem of **clustering**;
+what we *have* done is make searches *destined* to fail, fail **faster!**
+
+![Clustering in OLP](img/orderedLinearProbingExample.png "The result of inserting the same sequence of words as the previous figure, but with Ordered Linear Probing")
+
+You should implement this method in the class `OrderedLinearProbingHashTable`.
+You might find that several of the methods you implement are 100% identical to
+those employed by `LinearProbingHashTable`. If that is the case, we would
+recommend that you refactor your code such that methods with identical
+definitions are **all** merged into **one** `protected` method in
+`OpenAddressingHashTable`, so you only have to debug that **one** method if
+something bad were to happen.
+
 ### Quadratic Probing
+
+In lecture we saw that Linear Probing is susceptible to the "clustering"
+phenomenon, where various different collision chains end up "crowding" next to
+each other and even "overlapping". This causes several collisions for **even
+wildly** different hash codes when compared to the ones that started the
+chains. We also saw that tuning Linear Probing such that its "jump" is changed
+from 1 to some other number, e.g. 2 or 3, does **not** solve the clustering
+problem: instead, the clusters become *discontinguous* on the table.
+
+This leads us to ask: *what if, instead of having a static offset to Linear
+Probing, we were to __increase__ the "step" that the algorithm takes __every
+time it encounters a collision__?* One studied solution that implements this
+idea is **quadratic probing (QP)**. QP, in its simplest form (which is the one
+you will implement in this project), employs the following memory allocation
+function $`m_{qp}`$:
+
+```math
+m_{qp}(k,i) = [h(k)+(i-1)+(i-1)^2]\mod M
+```
+
+which will lead to the following memory addresses being probed:
+
+```math
+h(k)\mod M, [h(k)+2]\mod M, [h(k)+6]\mod M, [h(k)+12]\mod M, \ldots
+```
+
+Note that the offset is **always** computed from the address that $`h(k)`$
+initially probed. For example, if the hash table we saw for LP memory address
+probing were built with **quadratic** instead of linear probing, we would have
+the single memory allocations shown in the following figure:
+
+![Quadratic probing](img/ "Example of insertion speed-up achieved by quadratic probing")
+
+$`m_{qp}(22,2)`$ attains a bigger "jump" than $`m_{lp}(22,2)`$ and reduces the
+number of probes required to insert 22 by 1. For practice, try inserting 11 in
+either one of the hash tables **after** you insert 22, and see the speed-up
+attained by QP!
+
+The entire idea behind QP is that if a key collides with another, we need to
+*try harder to make it not collide in the immediate future*. By increasing the
+quadratic "step" every time that a collision happens, the algorithm hopes to
+disperse keys that collide more **aggressively**. Feel free to read the
+relevant Wikipedia article or scour the web for additional resources on how QP
+improves upon LP. It doesn't improve **universally**, though. For one, it
+doesn't display the **cache locality** that Linear Probing displays,
+especially for keys that collide a lot (so the value of $`i`$ is large for
+them). Also, the hash function is just a tiny bit more **expensive** to
+compute, since there's another summand and a squaring involved. Perhaps a form
+of *caching* could be employed to make it cheaper to compute.
+
+Two final implementation notes in QP. First, you might once again find that a
+lot of the code you write is identical to that of the other classes (though
+arguably less so). We would once again encourage you to package common pieces
+of code as `protected` methods in `OpenAddressingHashTable`. Second, since it
+is **very hard** to define the contiguous clusters when the key's "jump"
+changes with every collision encountered, in hard deletions you should simply
+**reinsert all keys besides the key that you want to delete**. Sounds
+inefficient, **is** inefficient. That leads us to the next section.
 
 ## Soft vs. Hard Deletion in Openly Addressed Hash Tables
 
