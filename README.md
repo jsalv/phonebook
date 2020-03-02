@@ -254,7 +254,12 @@ useful if we want to retrieve a pointer to a different container as our value
 
 ### Linear Probing
 
-Linear Probing (hereafter referred to as **LP**) is the oldest and simplest Open Addressing collision resolution method. It is a well-studied technique with some very attractive properties, first introduces and analyzed by Donald Knuth in 1963. An example of some insertions into a table that employs LP to store some **integers** is shown in the following figure. The hash function employed is a simple "modular" hash: $`h(i)=i \mod M`$.
+Linear Probing (hereafter referred to as **LP**) is the oldest and simplest
+Open Addressing collision resolution method. It is a well-studied technique
+with some very attractive properties, first introduces and analyzed by Donald
+Knuth in 1963. An example of some insertions into a table that employs LP to
+store some **integers** is shown in the following figure. The hash function
+employed is a simple "modular" hash: $`h(i)=i \mod M`$.
 
 ![Linear Probing example](img/linearProbingExample.png "An example of Linear Probing collision resolution")
 
@@ -284,12 +289,74 @@ This means that LP will probe the following memory addresses in the original
 hash table:
 
 ```math
-h(k)\mod M, (h(k)+1)\mod M,(h(k)+2)\mod M,(h(k)+3)\mod M,\ldots
+h(k)\mod M, [h(k)+1]\mod M, [h(k)+2]\mod M, [h(k)+3]\mod M, \ldots
 ```
 
-which fits intuition. For example, in the hash table shown in the figure below, if we wanted to insert the key 22, we would have the **sequential** memory allocations: $`m_{lp}(22,1)=h(22)+(1-1)=22\mod 11=0`$, $`m_{lp}(22,2)=\cdots=1`$, and $`m_{lp}(22,3)=3`$.
+which fits intuition. For example, in the hash table shown in the figure below, if we wanted to insert the key 22, we would have the **sequential** memory
+allocations: $`m_{lp}(22,1)=h(22)+(1-1)=22\mod 11=0`$, $`m_{lp}(22,2)=\cdots=1`$, and $`m_{lp}(22,3)=3`$.
 
 ![Examples of memory allocations](img/lpMemoryAllocations.png "Examples of various memory allocations for two integer keys")
+
+On the other hand, if we wanted to insert the key 9, we would only need the
+single allocation $`m_{lp}(9,1)=9`$, since cell 9 is empty. Of course, we
+could also compute $`m_{lp}(9,2)=10`$ or $`m_{lp}(9,3)=0`$, but there is no
+reason to, since $`m_{lp}`$ gave us an empty address in the first probe.
+
+LP has been praised for its **simplicity**, **excellent cache locality**, and
+**theoretical properties** when employing a quality hash function (we will
+discuss those in lecture). But what would happen if we were to employ a
+relatively *poor* hash function?
+
+To demonstrate what can happen, let's envision the following scenario. We
+have the following simple hash function for lowercase English characters:
+
+```math
+h_{char}(c)=(int)c-97
+```
+
+Since lowercase 'a' has the decimal value 97 in the ASCII table, we can
+subtract 97 to "zero-index" our hash function for lowercase English characters.
+The following table can provide you with a reference of English characters
+throughout the rest of this writeup:
+
+| **Character (a-m)**       |  a |  b |  c |  d |  e |  f |  g |  h |  i |  j |  k |  l |  m |
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **Value of $`h_{char}`$** |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10 | 11 | 12 |
+| **Character (n-z)**       |  n |  o |  p |  q |  r |  s |  t |  u |  v |  w |  x |  y |  z |
+| **Value of $`h_{char}`$** | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 |
+
+We can then use this function to generate another simple hash function, this
+time for strings:
+
+```math
+h_{str}(s) = h_{char}(s[0])\mod M
+```
+
+This hash function is *not very good*, particularly when compared to the
+default implementation of `String.hashCode()` in Java. First, every pair of
+lowercase strings which begin with the same letter will collide. This is true
+even if $`M>26`$, the cardinality of the English alphabet! But it's not of
+course just the *immediate* collisions that cause us grief: the first
+character collisions tend to make "clusters" in the table which make even
+insertions for strings that begin with a **new** first character (when
+compared to the first characters of the already inserted strings) collide!
+The following figure illustrates this. Note that the hash table is reasonably
+large so that no re-sizing is necessary during the insertions we show.
+
+![Clustering in LP](img/badHashWithLP.png "An example of the clustering phenomenon in LP when using a low quality hash function")
+
+The sequence of insertions for the above figure is: *sun*, *elated*, *sight*,
+*rocket*, *torus*, *feather*, *fiscal*, *fang*, *gorilla*. We see that
+inserting several keys with the same first character **enlarges the relevant
+collision chain**. But it's not just their *own* collision chain that they
+enlarge, but also **that of other keys** (*torus*, *gorilla*), which do
+**not** hash to the same bucket!
+
+Unfortunately, with the simple collision resolution technique that LP employs,
+we **cannot** hope to alleviate the clustering phenomenon. Our only solution
+to it is **re-sizing the table when we have to**. Do note, however, that with
+a hash function this bad, **even re-sizing cannot help us**, since the
+operation $`\mod M`$ does **not** fix the problems of $`h_{str}`$.
 
 ### Ordered Linear Probing
 
