@@ -545,4 +545,69 @@ deletion's efficiency as well as how much they affect the efficiency of
 
 ## FAQs
 
+### Why is it that `SeparateChainingHashTable` has two `public` methods (`enlarge()`, `shrink()`) which are *not* part of the interface `HashTable`?
 
+Because enlarging or reducing the number of entries in a hash table implemented
+with Separate Chaining as its collision resolution strategy is a process that
+never *has* to happen **automatically** in order for its operations to work
+(particularly, insertions). Enlarging the hash table can lead to better
+*efficiency* of operations, while reducing its size can lead to better storage
+tradeoffs after numerous **deletions** have happened. This means that changing
+the Separately Chained hash table's *capacity* is an issue that **should be
+left with the caller to decide**. Maybe the caller decides to enlarge when
+the capacity is at 70%; if so, the caller must **explicitly** make the call
+to `enlarge()` (similarly for `shrink()`). On the other hand, an openly
+addressed hash table will need to **internally resize** the table in order to
+**not just allow for better performance and storage trade-offs** but, in the
+case of insertions, **to even allow for the operation to complete!**
+
+### Does this mean that I *don't* need such methods for my Openly Addressed Hash Tables, that is, `LinearProbingHashTable` and `QuadraticProbingHashTable`?
+
+You will **absolutely** need such methods, but they have no business being
+`public` methods.
+
+### How should resizings be implemented?
+
+To begin with, you will **not** need to resize during **deletions**. Therefore,
+for insertions, you should follow the approach that we have discussed in
+lecture: **the _first_ insertion that takes place _after_ your hash table is
+at _50% capacity or more_ should _first_ trigger a resizing of the hash table
+to the _largest_ prime number _smaller_ than _twice your current size_, and
+_then_ insert the new key.** The method `PrimeGenerator.getNextPrime()` will
+take care of the expansions. For example, if the current hash table capacity
+is 7, the 4th insertion will cause the hash table to have a count of 4, which
+is $`\approx 57.1%`$ of the hash table size. We will **not** resize after the
+4th insertion though, because we **don't know whether a 5th one will come
+yet**, and it is possible that we would be resizing "for nothing". **If** a
+5th insertion is requested, we will **first** resize to 13, the largest prime
+number smaller than $`2\cdot 7=14`$, and **then** we will insert the 5th
+element. Note that the element might be hashed to an address different than
+the one it would have been hashed to if we had **not** resized, since the hash
+code will be "modded" by a **new** hash table size. It is important that you
+stick **exactly** to this guideline, because `HashTable` instances expose a
+`public` method called `capacity()` which checks for the actual hash table
+**size**, *ie* the number of cells of the internal 1D array that implements
+the actual table **whether they are occupied or not**. This means that we can
+**test** for the return value of that method, and we will be *expecting* that
+you follow these guidelines to a tee. Feel free to use the class
+`utils.PrimeGenerator` to get the appropriate prime numbers for free. Check
+the file `StudentTests.java` for some examples of how we can test for the
+return value of `capacity()`.
+
+### For an Openly Addressed Hash Table that is _very sparse_, doesn't it make sense to truncate its size to the first prime greater than its current number of elements, such that we save space?
+
+Yes, in practice, you should. However, in this project, we assume that our
+hash tables are kept at a reasonable load factor so that you don't ever
+encounter significant sparsity.
+
+### Why did you implement your own linked list over `KVPair` instances (`KVPairList`) instead of just instantiating the `private` data field `table` of `SeparateChainingHashTable` with a `java.util.LinkedList<KVPair>`? Surely that is easier to do instead of writing your own list for the project and then testing it!
+
+We do this because *creating a raw array over __generic__ types* in Java is a
+*pain*. As you can see in the figure below, in Java it is **not** possible to
+create a raw array over generics. `KVPairList` is, unfortunately, a generic
+type since it extends `Iterable<KVPair>`, itself a generic. We have included
+two example source code Java files, `GenericArrays.java` and
+`UnsafeDowncastings.java`, in the demos repository for you to consult, run,
+and understand this problem better.
+
+![Compile-time errors for arrays of generics](img/unCheckedDownCast.png "Creating an array of generic types leads to a compile-time error")
