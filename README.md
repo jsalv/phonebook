@@ -63,7 +63,7 @@ hash function!** Implementing all operations as mentioned above would
 constrain them to be *linear time*, which is **unacceptable** for both the
 project (*ie*, no credit for this project) and Computer Science **as a whole**.
 That said, **not all** of the methods you implement make use of the hash
-function, which means that their complexity parameters will necessarily by
+function, which means that their complexity parameters will necessarily be
 different. (Can you find any such methods?)
 
 You should fill in the `public` methods of `SeparateChainingHashTable`,
