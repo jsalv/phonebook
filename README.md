@@ -289,7 +289,19 @@ This means that LP will probe the following memory addresses in the original
 hash table:
 
 ```math
-h(k)\mod M, [h(k)+1]\mod M, [h(k)+2]\mod M, [h(k)+3]\mod M, \ldots
+h(k)\mod M
+```
+```math
+[h(k)+1]\mod M
+```
+```math
+[h(k)+2]\mod M
+```
+```math
+[h(k)+3]\mod M
+```
+```math
+\vdots
 ```
 
 which fits intuition. For example, in the hash table shown in the figure below, if we wanted to insert the key 22, we would have the **sequential** memory
@@ -426,7 +438,19 @@ m_{qp}(k,i) = [h(k)+(i-1)+(i-1)^2]\mod M
 which will lead to the following memory addresses being probed:
 
 ```math
-h(k)\mod M, [h(k)+2]\mod M, [h(k)+6]\mod M, [h(k)+12]\mod M, \ldots
+h(k)\mod M
+```
+```math
+[h(k)+2]\mod M
+```
+```math
+[h(k)+6]\mod M
+```
+```math
+[h(k)+12]\mod M
+```
+```math
+\vdots
 ```
 
 Note that the offset is **always** computed from the address that $`h(k)`$
@@ -434,7 +458,7 @@ initially probed. For example, if the hash table we saw for LP memory address
 probing were built with **quadratic** instead of linear probing, we would have
 the single memory allocations shown in the following figure:
 
-![Quadratic probing](img/ "Example of insertion speed-up achieved by quadratic probing")
+![Quadratic probing](img/qpMemoryAllocations.png "Example of insertion speed-up achieved by quadratic probing")
 
 $`m_{qp}(22,2)`$ attains a bigger "jump" than $`m_{lp}(22,2)`$ and reduces the
 number of probes required to insert 22 by 1. For practice, try inserting 11 in
@@ -463,6 +487,61 @@ changes with every collision encountered, in hard deletions you should simply
 inefficient, **is** inefficient. That leads us to the next section.
 
 ## Soft vs. Hard Deletion in Openly Addressed Hash Tables
+
+As you know from lecture, during hard deletion LP nullifies and re-inserts
+all keys that follow it *within the cluster itself* (so it should stop the
+process when it hits `null`). The same process is followed by OLP, whereas QP
+takes it one step "further" by simply re-inserting **all** keys that are
+**not** the key of interest, since in QP it is not straightforward to
+determine the memory topology of the clusters. On the other hand, this is
+**not** a problem that affect `SeparateChainedHashTable`, since those kinds
+of tables can simply call `KVPairList.remove()` and be done with a key with
+reasonable efficiency and no need to re-insert any other keys!
+
+For this reason, we introduce a named constant called `TOMBSTONE` in
+`OpenlyAddressedHashTable`. This constant will be used as a placeholder for
+*softly deleted* `KVPair`s in the table. It is **supremely important** to
+understand the following things about this constant:
+
+ * Any memory address that holds this constant is an *available* position
+   for insertion of a new key. Therefore, for purposes of **insertion**, if
+   the hash table in question soft-deletes, you can treat a
+   tombstone-containing cell as an empty cell.
+ * Any memory address that holds this constant is **not** a `null` cell! So,
+   the collision chains that "went over" this memory address before the soft
+   deletions still continue to "go over it"! We **do not break** collision
+   chains this way (this would be bad)! In fact, since we know that just
+   `null`-ifying collision chains breaks search, yielding the necessity of
+   re-insertion of the subsequent cluster elements, we are **obligated** to
+   **not** treat `TOMBSTONE` as a `null` entry. You should take this into
+   consideration when implementing `get()` in your hash tables.
+ * Since tombstone-containing memory addresses will still burden searches with
+   an additional probe, **they are considered as an occupied cell when we
+   resize**. For example, in the following figure, any new insertion will
+   contribute to a resizing, since the hash table **already** has a count of
+   elements (`size()`) of **more than half** its capacity (`capacity()`). However
+   **TOMBSTONES THEMSELVES DO NOT GET RE-INSERTED!** What kind of hash value
+   could we expect off of a tombstone to re-insert it, anyway?[^2]
+ 
+![Tombstones in a hash table](img/resizeWithTombstones.png "Illustration of the fact that tombstones in a hash table contribute to its count of elements")
+
+When **hippo** is inserted, the table *might* contain only four *actual* keys,
+but the tombstones are actually *there*, so the resizing operation will be
+triggered *before* **hippo** is inserted. Why can't the tombstones just be
+"swept away" by essentially being treated like `null` entries? Well, because
+that would break search for subsequent keys! In this case, if the "dummy"
+tombstone entry at position 2 were treated like a `null` entry, future
+searches for **lynx** would **falsely fail!**
+
+Finally, how do we tune an `OpenAddressingHashTable` instance for hard or soft
+deletion? Simple. The various constructors of the classes that extend this
+class have a `boolean` argument which, if `true`, determines that the instance
+being created will perform **soft** deletion, **hard** otherwise. You can
+even run your own timing experiments this way, and compare hard vs. soft
+deletion's efficiency as well as how much they affect the efficiency of
+*other* operations!
+
+ [^2]: It turns out that tombstones are quite a popular idea in Computer Science as a whole and in hashing in particular.
 
 ## FAQs
 
