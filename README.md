@@ -543,6 +543,20 @@ deletion's efficiency as well as how much they affect the efficiency of
 
  [^2]: It turns out that tombstones are quite a popular idea in Computer Science as a whole and in hashing in particular.
 
+
+
+## A few hints/notes about the project
+
+In this project, we will be checking the number of probes you make to insert/search/delete an element. This may be a little too hard, but also can detect the case where you do not use a hashing at all. To make sure you pass all of the tests, make sure you are awared of the following:
+
+* When you have to resize, you should also count the number of probes you make reinserting each elements.
+* In quadratic probing, you will have to reinsert all elements during resizing for hard deletion, because there will not be a cluster for quadratic probing. 
+* For all hash table for soft deletion, we do not utilize tombstone for insertion. (That is, when you try to insert an element, we only use next null cell for insertion.)
+* Resize policy: 
+   1. Check if 50% < (number of elements + number of tombstone) / capacity. 
+   2. Do not reinsert tombstone back into the table. 
+   3. You may choose to enlarge the capacity, or remain the capacity during the resize.
+
 ## FAQs
 
 ### Why is it that `SeparateChainingHashTable` has two `public` methods (`enlarge()`, `shrink()`) which are *not* part of the interface `HashTable`?
