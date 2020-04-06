@@ -205,10 +205,10 @@ public class StudentTests {
         assertEquals(2, lp.remove("Jerry").getProbes());
         assertEquals(null, lp.remove("Jerry").getValue());
 
-        assertEquals(2, lp.remove("Jessie").getProbes());
-        assertEquals(1, lp.remove("Arnold").getProbes());
-        assertEquals(1, lp.remove("Tiffany").getProbes());
-        assertEquals(1, lp.remove("Mary").getProbes());
+        assertEquals(3, lp.remove("Jessie").getProbes());
+        assertEquals(2, lp.remove("Arnold").getProbes());
+        assertEquals(2, lp.remove("Tiffany").getProbes());
+        assertEquals(2, lp.remove("Mary").getProbes());
 
 
 
