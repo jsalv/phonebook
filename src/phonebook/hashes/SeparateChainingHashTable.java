@@ -43,12 +43,26 @@ public class SeparateChainingHashTable implements HashTable{
      *  Default constructor. Initializes the internal storage with a size equal to the default of {@link PrimeGenerator}.
      */
     public SeparateChainingHashTable(){
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	count = 0;  	
+    	primeGenerator = new PrimeGenerator();
+    	table = new KVPairList[primeGenerator.getCurrPrime()];
     }
 
     @Override
     public Probes put(String key, String value) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	if (key == null || value == null)
+    		throw new IllegalArgumentException("key or value input cannot be null!");
+    	// Array is empty  	
+    	int probeCount = 0;   	
+    	if (count == 0) {   		
+    		probeCount++;
+    		int bucketDex = hash(key) % table.length;
+    		System.out.println(bucketDex + " " + key);
+    		table[bucketDex] = new KVPairList(key, value);
+    	}
+    	count++; // might change place of count
+    	Probes p = new Probes(value,probeCount);
+    	return p;
     }
 
     @Override
@@ -73,7 +87,7 @@ public class SeparateChainingHashTable implements HashTable{
 
     @Override
     public int size() {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	return count;
     }
 
     @Override
