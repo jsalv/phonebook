@@ -48,38 +48,34 @@ public class SeparateChainingHashTable implements HashTable{
     	count = 0;  	
     	primeGenerator = new PrimeGenerator();
     	table = new KVPairList[primeGenerator.getCurrPrime()];
-    	table2d = new KVPair[primeGenerator.getCurrPrime()][primeGenerator.getCurrPrime()];
+    	table2d = new KVPair[primeGenerator.getCurrPrime()][new PrimeGenerator().getNextPrime()];
     }
 
     @Override
     public Probes put(String key, String value) {
     	if (key == null || value == null)
-    		throw new IllegalArgumentException("key or value input cannot be null!");    	
+    		throw new IllegalArgumentException("key or value input cannot be null!"); 
+    	/* Create a hash table of hash tables where second level of hash is greater
+		 * in length and still prime because prime numbers enable a higher chance of an even 
+		 * distribution of elements and a larger array size would avoid an entry 
+		 * having multiple elements
+		 * */
     	int probeCount = 0; 
-    	int bucketDex = hash(key) % table.length;
-    	int capacity = primeGenerator.getNextPrime();
-		KVPair[]  t = new KVPair[capacity];
+    	int bucketDex = hash(key);
+
     	// Array is empty or bucketDex is unoccupied 	
     	if (table[bucketDex] == null) {   		
     		probeCount++;
     		table[bucketDex] = new KVPairList(key, value);
-    		table2d[bucketDex][hash(key) % t.length] = new KVPair(key, value);
+    		
     	// bucketDex is occupied
     	} else {
-    		// Create a hash table of hash tables where second level of hash is greater in length and still prime
-    		// because prime numbers enable a higher chance of an even distribution of elements and
-    		// a larger array size would avoid an entry having multiple elements   		
-    		KVPairList prevEntry = table[bucketDex];
-    		for (KVPair kv : prevEntry) {
-    			int newBDex = hash(kv.getKey()) % t.length;
-    			t[newBDex] = kv;
-    		}
-    		
-    		table2d[bucketDex] = t;
     		// Basic chaining
     		table[bucketDex].addBack(key, value);
     		probeCount = table[bucketDex].size();
+    		  		
     	}
+    	table2d[bucketDex][(key.hashCode() & 0x7fffffff) % table2d[bucketDex].length] = new KVPair(key, value);
     	count++; 
     	Probes p = new Probes(value,probeCount);
     	return p;
