@@ -240,6 +240,29 @@ public class StudentTests {
         assertEquals("After additions and deletions, and additions again, resize should be triggered and the capacity should be 43, but get " + lp.capacity() + ".", 43, lp.capacity());
 
     }
+    
+    @Test
+    public void testSeparateChainingHashTable() {
+    	SeparateChainingHashTable scht = new SeparateChainingHashTable();
+    	
+    	/* * * Test for null value * * */ 	
+    	// Case 1: one null value given
+    	try {
+    		scht.put(null, "edna");
+    	} catch(IllegalArgumentException e) {
+    		System.out.println("IllegalArgumentException thrown. Case 1.");
+    	}
+    	// Case 2: all null values given
+    	try {
+    		scht.put(null, null);
+    	} catch(IllegalArgumentException e) {
+    		System.out.println("IllegalArgumentException thrown. Case 2.");
+    	}
+    	
+    	/* * * Test for initial input to empty hash table * * */ 
+    	scht.put("Henry", "La");
+    }
+    
 
 
 }
