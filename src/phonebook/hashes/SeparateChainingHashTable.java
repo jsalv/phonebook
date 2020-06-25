@@ -1,6 +1,7 @@
 package phonebook.hashes;
 
 import phonebook.exceptions.UnimplementedMethodException;
+import phonebook.utils.KVPair;
 import phonebook.utils.KVPairList;
 import phonebook.utils.PrimeGenerator;
 import phonebook.utils.Probes;
@@ -13,7 +14,7 @@ import phonebook.utils.Probes;
  * Open Addressing methods, like those implemented in {@link LinearProbingHashTable} and {@link QuadraticProbingHashTable}
  * are more desirable in practice, since they use the original space of the table for the collision chains themselves.</p>
  *
- * @author YOUR NAME HERE!
+ * @author Jemimah E.P. Salvacion
  * @see HashTable
  * @see SeparateChainingHashTable
  * @see LinearProbingHashTable
@@ -27,6 +28,7 @@ public class SeparateChainingHashTable implements HashTable{
     /* ****************************************************************** */
 
     private KVPairList[] table;
+    private KVPair[][] table2d;
     private int count;
     private PrimeGenerator primeGenerator;
 
@@ -46,21 +48,39 @@ public class SeparateChainingHashTable implements HashTable{
     	count = 0;  	
     	primeGenerator = new PrimeGenerator();
     	table = new KVPairList[primeGenerator.getCurrPrime()];
+    	table2d = new KVPair[primeGenerator.getCurrPrime()][primeGenerator.getCurrPrime()];
     }
 
     @Override
     public Probes put(String key, String value) {
     	if (key == null || value == null)
-    		throw new IllegalArgumentException("key or value input cannot be null!");
-    	// Array is empty  	
-    	int probeCount = 0;   	
-    	if (count == 0) {   		
+    		throw new IllegalArgumentException("key or value input cannot be null!");    	
+    	int probeCount = 0; 
+    	int bucketDex = hash(key) % table.length;
+    	int capacity = primeGenerator.getNextPrime();
+		KVPair[]  t = new KVPair[capacity];
+    	// Array is empty or bucketDex is unoccupied 	
+    	if (table[bucketDex] == null) {   		
     		probeCount++;
-    		int bucketDex = hash(key) % table.length;
-    		System.out.println(bucketDex + " " + key);
     		table[bucketDex] = new KVPairList(key, value);
+    		table2d[bucketDex][hash(key) % t.length] = new KVPair(key, value);
+    	// bucketDex is occupied
+    	} else {
+    		// Create a hash table of hash tables where second level of hash is greater in length and still prime
+    		// because prime numbers enable a higher chance of an even distribution of elements and
+    		// a larger array size would avoid an entry having multiple elements   		
+    		KVPairList prevEntry = table[bucketDex];
+    		for (KVPair kv : prevEntry) {
+    			int newBDex = hash(kv.getKey()) % t.length;
+    			t[newBDex] = kv;
+    		}
+    		
+    		table2d[bucketDex] = t;
+    		// Basic chaining
+    		table[bucketDex].addBack(key, value);
+    		probeCount = table[bucketDex].size();
     	}
-    	count++; // might change place of count
+    	count++; 
     	Probes p = new Probes(value,probeCount);
     	return p;
     }
@@ -77,7 +97,9 @@ public class SeparateChainingHashTable implements HashTable{
 
     @Override
     public boolean containsKey(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	int bucketDex = hash(key) % table.length;
+    	boolean condition = table[bucketDex] == null;
+    	return !condition;
     }
 
     @Override
