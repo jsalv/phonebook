@@ -72,7 +72,7 @@ public class SeparateChainingHashTable implements HashTable{
     	} else {
     		// Basic chaining
     		table[bucketDex].addBack(key, value);
-    		probeCount = table[bucketDex].size();
+    		probeCount++;
     		  		
     	}
     	table2d[bucketDex][(key.hashCode() & 0x7fffffff) % table2d[bucketDex].length] = new KVPair(key, value);
@@ -82,25 +82,50 @@ public class SeparateChainingHashTable implements HashTable{
     }
 
     @Override
-    public Probes get(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    public Probes get(String key) {  
+    	if (key != null) {
+    		int x = hash(key);
+        	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
+        	return table[x].getValue(key);
+    	}
+    	return new Probes(null,0);
     }
 
     @Override
     public Probes remove(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	if (key != null) {
+    		int x = hash(key);
+        	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
+        	Probes prevProbe = table[x].getValue(key);
+	    	// Case 1: If element exists
+	    	if (table2d[x][y] != null && table2d[x][y].getKey() == key) {
+	    		table2d[x][y] = null;
+	    		KVPairList newTable = new KVPairList();
+	    		for (KVPair kv : table[x]) {
+	    			if (kv.getKey().equals(key) == false)
+	    				newTable.addBack(kv.getKey(), kv.getValue());
+	    		}
+	    		table[x] = newTable;
+	    	}    	
+	    	return prevProbe;
+    	}
+    	return new Probes(null,0);
     }
 
     @Override
     public boolean containsKey(String key) {
-    	int bucketDex = hash(key) % table.length;
-    	boolean condition = table[bucketDex] == null;
-    	return !condition;
+    	int x = hash(key);
+    	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
+    	return !(table2d[x][y] == null);
     }
 
     @Override
     public boolean containsValue(String value) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	for (int i = 0; i < table.length; i++) {
+    		if (table[i].containsValue(value) == true)
+    			return true;
+    	}
+    	return false;  	
     }
 
     @Override
@@ -120,8 +145,20 @@ public class SeparateChainingHashTable implements HashTable{
      * @see PrimeGenerator#getNextPrime()
      */
     public void enlarge() {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
-    }
+    	count = 0;
+        KVPairList[] prev = table;;        
+        table = new KVPairList[primeGenerator.getNextPrime()];        
+        table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
+        for (int i = 0; i < prev.length; i++) {
+        	if (prev[i] != null) {
+        		for (KVPair kv : prev[i]) {
+            		put(kv.getKey(), kv.getValue());
+            	}  	
+        	}
+        	
+        }
+        
+     }
 
     /**
      * Shrinks this hash table. At the very minimum, this method should decrease the size of the hash table and ensure
@@ -131,6 +168,17 @@ public class SeparateChainingHashTable implements HashTable{
      * @see PrimeGenerator#getPreviousPrime()
      */
     public void shrink(){
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	count = 0;
+        KVPairList[] prev = table;;        
+        table = new KVPairList[primeGenerator.getPreviousPrime()];        
+        table2d  = new KVPair[table.length][prev.length];
+        for (int i = 0; i < prev.length; i++) {
+        	if (prev[i] != null) {
+        		for (KVPair kv : prev[i]) {
+            		put(kv.getKey(), kv.getValue());
+            	}  	
+        	}
+        	
+        }
     }
 }
