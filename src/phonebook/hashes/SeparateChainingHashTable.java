@@ -30,6 +30,7 @@ public class SeparateChainingHashTable implements HashTable{
     private KVPairList[] table;
     private KVPair[][] table2d;
     private int count;
+    private int uniqueCount;
     private PrimeGenerator primeGenerator;
 
     // We mask the top bit of the default hashCode() to filter away negative values.
@@ -45,7 +46,8 @@ public class SeparateChainingHashTable implements HashTable{
      *  Default constructor. Initializes the internal storage with a size equal to the default of {@link PrimeGenerator}.
      */
     public SeparateChainingHashTable(){
-    	count = 0;  	
+    	count = 0;
+    	uniqueCount = 0;
     	primeGenerator = new PrimeGenerator();
     	table = new KVPairList[primeGenerator.getCurrPrime()];
     	table2d = new KVPair[primeGenerator.getCurrPrime()][new PrimeGenerator().getNextPrime()];
@@ -59,33 +61,35 @@ public class SeparateChainingHashTable implements HashTable{
 		 * in length and still prime because prime numbers enable a higher chance of an even 
 		 * distribution of elements and a larger array size would avoid an entry 
 		 * having multiple elements
-		 * */
-    	int probeCount = 0; 
+		 * */  
+    	boolean wasResized = false;
+    	// Check for resizing first
+    	if (uniqueCount > table.length/2) {
+    		// Probe count will increase because of re-insertion
+    		enlarge();
+    		wasResized = true;
+    	}
     	int bucketDex = hash(key);
-
     	// Array is empty or bucketDex is unoccupied 	
     	if (table[bucketDex] == null) {   		
-    		probeCount++;
     		table[bucketDex] = new KVPairList(key, value);
-    		
+    		uniqueCount++;
     	// bucketDex is occupied
     	} else {
     		// Basic chaining
     		table[bucketDex].addBack(key, value);
-    		probeCount++;
-    		  		
     	}
     	table2d[bucketDex][(key.hashCode() & 0x7fffffff) % table2d[bucketDex].length] = new KVPair(key, value);
     	count++; 
-    	Probes p = new Probes(value,probeCount);
-    	return p;
+    	if (wasResized == true)
+    		return new Probes(value,count);
+    	return new Probes(value,1);
     }
 
     @Override
     public Probes get(String key) {  
     	if (key != null) {
     		int x = hash(key);
-        	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
         	return table[x].getValue(key);
     	}
     	return new Probes(null,0);
@@ -96,18 +100,11 @@ public class SeparateChainingHashTable implements HashTable{
     	if (key != null) {
     		int x = hash(key);
         	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
-        	Probes prevProbe = table[x].getValue(key);
 	    	// Case 1: If element exists
 	    	if (table2d[x][y] != null && table2d[x][y].getKey() == key) {
 	    		table2d[x][y] = null;
-	    		KVPairList newTable = new KVPairList();
-	    		for (KVPair kv : table[x]) {
-	    			if (kv.getKey().equals(key) == false)
-	    				newTable.addBack(kv.getKey(), kv.getValue());
-	    		}
-	    		table[x] = newTable;
 	    	}    	
-	    	return prevProbe;
+    		return table[x].removeByKey(key);
     	}
     	return new Probes(null,0);
     }
@@ -145,10 +142,15 @@ public class SeparateChainingHashTable implements HashTable{
      * @see PrimeGenerator#getNextPrime()
      */
     public void enlarge() {
-    	count = 0;
-        KVPairList[] prev = table;;        
-        table = new KVPairList[primeGenerator.getNextPrime()];        
+    	int x = primeGenerator.getCurrPrime();
+        if (uniqueCount*2 > x)
+        	x = primeGenerator.getNextPrime();
+        count = 0; 
+        uniqueCount = 0;
+        KVPairList[] prev = table;
+        table = new KVPairList[x];        
         table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
+        // Re-insertion requires adding new probes
         for (int i = 0; i < prev.length; i++) {
         	if (prev[i] != null) {
         		for (KVPair kv : prev[i]) {
@@ -169,6 +171,7 @@ public class SeparateChainingHashTable implements HashTable{
      */
     public void shrink(){
     	count = 0;
+    	uniqueCount = 0;
         KVPairList[] prev = table;;        
         table = new KVPairList[primeGenerator.getPreviousPrime()];        
         table2d  = new KVPair[table.length][prev.length];
