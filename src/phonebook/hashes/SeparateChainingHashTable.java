@@ -62,13 +62,6 @@ public class SeparateChainingHashTable implements HashTable{
 		 * distribution of elements and a larger array size would avoid an entry 
 		 * having multiple elements
 		 * */  
-    	boolean wasResized = false;
-    	// Check for resizing first
-    	if (uniqueCount > table.length/2) {
-    		// Probe count will increase because of re-insertion
-    		enlarge();
-    		wasResized = true;
-    	}
     	int bucketDex = hash(key);
     	// Array is empty or bucketDex is unoccupied 	
     	if (table[bucketDex] == null) {   		
@@ -80,9 +73,7 @@ public class SeparateChainingHashTable implements HashTable{
     		table[bucketDex].addBack(key, value);
     	}
     	table2d[bucketDex][(key.hashCode() & 0x7fffffff) % table2d[bucketDex].length] = new KVPair(key, value);
-    	count++; 
-    	if (wasResized == true)
-    		return new Probes(value,count);
+    	
     	return new Probes(value,1);
     }
 
@@ -97,6 +88,7 @@ public class SeparateChainingHashTable implements HashTable{
 
     @Override
     public Probes remove(String key) {
+    	// This version passed remove release test
     	if (key != null) {
     		int x = hash(key);
         	int y = (key.hashCode() & 0x7fffffff) % table2d[x].length;
