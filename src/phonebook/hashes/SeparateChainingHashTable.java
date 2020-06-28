@@ -73,7 +73,7 @@ public class SeparateChainingHashTable implements HashTable{
     		table[bucketDex].addBack(key, value);
     	}
     	table2d[bucketDex][(key.hashCode() & 0x7fffffff) % table2d[bucketDex].length] = new KVPair(key, value);
-    	
+    	count++;
     	return new Probes(value,1);
     }
 
@@ -95,7 +95,8 @@ public class SeparateChainingHashTable implements HashTable{
 	    	// Case 1: If element exists
 	    	if (table2d[x][y] != null && table2d[x][y].getKey() == key) {
 	    		table2d[x][y] = null;
-	    	}    	
+	    	} 
+	    	count--;
     		return table[x].removeByKey(key);
     	}
     	return new Probes(null,0);
@@ -135,22 +136,28 @@ public class SeparateChainingHashTable implements HashTable{
      */
     public void enlarge() {
     	int x = primeGenerator.getCurrPrime();
-        if (uniqueCount*2 > x)
-        	x = primeGenerator.getNextPrime();
-        count = 0; 
-        uniqueCount = 0;
-        KVPairList[] prev = table;
-        table = new KVPairList[x];        
-        table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
-        // Re-insertion requires adding new probes
-        for (int i = 0; i < prev.length; i++) {
-        	if (prev[i] != null) {
-        		for (KVPair kv : prev[i]) {
-            		put(kv.getKey(), kv.getValue());
-            	}  	
-        	}
-        	
-        }
+    	boolean proceed = false;
+		if ((double)count/x > 0.5) {
+			x = primeGenerator.getNextPrime();
+			proceed = true;
+		}
+		if (proceed) {
+	        count = 0; 
+	        uniqueCount = 0;
+	        KVPairList[] prev = table;
+	        table = new KVPairList[x];        
+	        table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
+	        primeGenerator.getPreviousPrime();
+	        // Re-insertion requires adding new probes
+	        for (int i = 0; i < prev.length; i++) {
+	        	if (prev[i] != null) {
+	        		for (KVPair kv : prev[i]) {
+	            		put(kv.getKey(), kv.getValue());
+	            	}  	
+	        	}
+	        	
+	        }
+		}
         
      }
 
