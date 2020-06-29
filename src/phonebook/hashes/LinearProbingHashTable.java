@@ -1,6 +1,8 @@
 package phonebook.hashes;
 
 import phonebook.exceptions.UnimplementedMethodException;
+import phonebook.utils.KVPair;
+import phonebook.utils.KVPairList;
 import phonebook.utils.PrimeGenerator;
 import phonebook.utils.Probes;
 
@@ -13,7 +15,7 @@ import phonebook.utils.Probes;
  * inserted without collisions. {@link QuadraticProbingHashTable} is a {@link HashTable} that
  * tries to avoid this problem, albeit sacrificing cache locality.</p>
  *
- * @author YOUR NAME HERE!
+ * @author Jemimah E.P. Salvacion
  *
  * @see HashTable
  * @see SeparateChainingHashTable
@@ -26,7 +28,7 @@ public class LinearProbingHashTable extends OpenAddressingHashTable {
     /* ********************************************************************/
     /* ** INSERT ANY PRIVATE METHODS OR FIELDS YOU WANT TO USE HERE: ******/
     /* ********************************************************************/
-
+	
     /* ******************************************/
     /*  IMPLEMENT THE FOLLOWING PUBLIC METHODS: */
     /* **************************************** */
@@ -38,7 +40,10 @@ public class LinearProbingHashTable extends OpenAddressingHashTable {
      *             we want soft deletion, {@code false} otherwise.
      */
     public LinearProbingHashTable(boolean soft) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	primeGenerator = new PrimeGenerator();
+    	table = new KVPair[this.primeGenerator.getCurrPrime()];
+    	count = 0;
+    	softFlag = soft;
     }
 
     /**
@@ -59,12 +64,75 @@ public class LinearProbingHashTable extends OpenAddressingHashTable {
      */
     @Override
     public Probes put(String key, String value) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	if (key == null || value == null)
+    		throw new IllegalArgumentException("key or value input cannot be null!");  	
+    	int probeCount = 0;
+    	/* * * CHECK FOR RESIZING * * */
+    	if (count > table.length/2) {
+    		KVPair[] prev = table;
+    		count = 0;
+    		table = new KVPair[primeGenerator.getNextPrime()];
+    		for (int x = 0; x < prev.length; x++) {
+    			if (prev[x] != null) 
+    				probeCount += put(prev[x].getKey(), prev[x].getValue()).getProbes();
+    			else
+    				probeCount++;
+    		}
+    	}
+    	int bucketDex = hash(key);
+    	// Case 1: Array is empty
+    	if (table[bucketDex] == null || table[bucketDex].equals(TOMBSTONE)) {
+    		table[bucketDex] = new KVPair(key, value);
+    		probeCount++;
+    	// Case 2: bucketDex is occupied
+    	} else {
+    		probeCount++;
+    		int i = bucketDex + 1;
+    		while (i < table.length || table[bucketDex].equals(TOMBSTONE)) {
+    			probeCount++;
+    			if (table[i] == null) {
+    				table[i] = new KVPair(key, value);
+    				break;
+    			}
+    			i++;
+    		}
+    	}
+    	count++;
+    	return new Probes(value, probeCount);
     }
 
     @Override
     public Probes get(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	if (key != null) {
+    		int x = hash(key);
+    		// Case 1: Key is found at hashed index
+        	if (table[x] != null && table[x].getKey() == key) {
+        		return new Probes(table[x].getValue(), 1);
+        	// Case 2: Cell is empty
+        	} else if (table[x] == null) {
+        		return new Probes(null,1);
+        	// Case 3: Key was possibly probed to the next non-empty cell or does not exist
+        	} else {
+        		int i = x;
+        		int probeCount = 0;
+        		String val = null;
+        		while (i < table.length) {
+        			// probeCount needs to be in the beginning to signify cell visitation
+        			probeCount++;
+        			// Key doesn't exist
+        			if (table[i] == null)
+    					break;
+        			// Key exists
+        			else if (table[i] != null && table[i].getKey() == key) {
+        				val = table[i].getValue();
+        				break;
+        			}
+        			i++;
+        		}
+        		return new Probes(val, probeCount); 
+        	}
+    	}
+    	return new Probes(null,0);
     }
 
 
@@ -78,26 +146,59 @@ public class LinearProbingHashTable extends OpenAddressingHashTable {
      */
     @Override
     public Probes remove(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+        if (key != null) {
+        	int x = hash(key);
+        	int probeCount = 1;
+        	String oldVal = null;
+    		// Case 1: Key is found at hashed index
+        	if (table[x] != null && table[x].getKey() == key) {
+        		oldVal = table[x].getValue();
+        		table[x] = TOMBSTONE;
+        		return new Probes(oldVal, ++probeCount);
+        	// Case 2: Key linearly probed or may not exist
+        	} else {
+        		int i = x;
+        		while (i < table.length) {
+        			// Key non-existent 
+        			if (table[i] == null) { 
+        				return new Probes(null, probeCount);
+        			}
+        			// Key exists
+        			if (table[i].getKey() == key) {
+        				oldVal = table[i].getValue();
+        				table[i] = TOMBSTONE;
+        				probeCount++;
+                		return new Probes(oldVal, probeCount);
+        			}
+        			probeCount++;
+        			i++;
+        		}
+        	}
+        }
+        return null;
     }
 
     @Override
     public boolean containsKey(String key) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+        return get(key).getValue() != null;
     }
 
     @Override
     public boolean containsValue(String value) {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+    	for (int i = 0; i < table.length; i++) {
+    		if (table[i].getValue() == value)
+    			return true;
+    	}
+    	return false;
     }
 
     @Override
     public int size() {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+        return count;
     }
 
     @Override
     public int capacity() {
-        throw new UnimplementedMethodException(); // ERASE THIS LINE AFTER IMPLEMENTING THIS METHOD!
+        return table.length;
     }
 }
