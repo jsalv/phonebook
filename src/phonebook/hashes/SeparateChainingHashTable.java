@@ -30,7 +30,6 @@ public class SeparateChainingHashTable implements HashTable{
     private KVPairList[] table;
     private KVPair[][] table2d;
     private int count;
-    private int uniqueCount;
     private PrimeGenerator primeGenerator;
 
     // We mask the top bit of the default hashCode() to filter away negative values.
@@ -47,7 +46,6 @@ public class SeparateChainingHashTable implements HashTable{
      */
     public SeparateChainingHashTable(){
     	count = 0;
-    	uniqueCount = 0;
     	primeGenerator = new PrimeGenerator();
     	table = new KVPairList[primeGenerator.getCurrPrime()];
     	table2d = new KVPair[primeGenerator.getCurrPrime()][new PrimeGenerator().getNextPrime()];
@@ -66,7 +64,6 @@ public class SeparateChainingHashTable implements HashTable{
     	// Array is empty or bucketDex is unoccupied 	
     	if (table[bucketDex] == null) {   		
     		table[bucketDex] = new KVPairList(key, value);
-    		uniqueCount++;
     	// bucketDex is occupied
     	} else {
     		// Basic chaining
@@ -81,7 +78,8 @@ public class SeparateChainingHashTable implements HashTable{
     public Probes get(String key) {  
     	if (key != null) {
     		int x = hash(key);
-        	return table[x].getValue(key);
+    		if (table[x] != null)
+    			return table[x].getValue(key);
     	}
     	return new Probes(null,0);
     }
@@ -135,30 +133,20 @@ public class SeparateChainingHashTable implements HashTable{
      * @see PrimeGenerator#getNextPrime()
      */
     public void enlarge() {
-    	int x = primeGenerator.getCurrPrime();
-    	boolean proceed = false;
-		if ((double)count/x > 0.5) {
-			x = primeGenerator.getNextPrime();
-			proceed = true;
-		}
-		if (proceed) {
-	        count = 0; 
-	        uniqueCount = 0;
-	        KVPairList[] prev = table;
-	        table = new KVPairList[x];        
-	        table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
-	        primeGenerator.getPreviousPrime();
-	        // Re-insertion requires adding new probes
-	        for (int i = 0; i < prev.length; i++) {
-	        	if (prev[i] != null) {
-	        		for (KVPair kv : prev[i]) {
-	            		put(kv.getKey(), kv.getValue());
-	            	}  	
-	        	}
-	        	
-	        }
-		}
-        
+    	count = 0; 
+    	KVPairList[] prev = table;
+    	table = new KVPairList[primeGenerator.getNextPrime()];        
+    	table2d  = new KVPair[table.length][primeGenerator.getNextPrime()];
+    	primeGenerator.getPreviousPrime();
+    	// Re-insertion requires adding new probes
+    	for (int i = 0; i < prev.length; i++) {
+    		if (prev[i] != null) {
+    			for (KVPair kv : prev[i]) {
+    				put(kv.getKey(), kv.getValue());
+    			}  	
+    		}
+
+    	}    
      }
 
     /**
@@ -170,7 +158,6 @@ public class SeparateChainingHashTable implements HashTable{
      */
     public void shrink(){
     	count = 0;
-    	uniqueCount = 0;
         KVPairList[] prev = table;;        
         table = new KVPairList[primeGenerator.getPreviousPrime()];        
         table2d  = new KVPair[table.length][prev.length];

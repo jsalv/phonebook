@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import phonebook.hashes.*;
 import phonebook.utils.NoMorePrimesException;
+import phonebook.utils.Probes;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -257,11 +258,104 @@ public class StudentTests {
     		scht.put(null, null);
     	} catch(IllegalArgumentException e) {
     		System.out.println("IllegalArgumentException thrown. Case 2.");
-    	}
-    	
+    	}  	
     	/* * * Test for initial input to empty hash table * * */ 
-    	scht.put("Henry", "La");
+    	// Seems initial input is indexed at 2 due to initial bucket size being 7
+    	// Must return a probe of 1
+    	assertEquals(new Probes("893-393-5689",1),scht.put("Henry", "893-393-5689"));  	
+    	/* * * Test for input to nonempty hash table * * */
+    	scht.put("Esther", "894-59-0011");
+    	scht.put("Hien", "893-59-0011");
+    	scht.put("Patrick", "893-59-0011");
+    	
+/*    	long startTime = System.nanoTime();
+    	scht.containsKey("Hien");
+    	long endTime = System.nanoTime();
+
+    	long duration = (endTime - startTime);
+    	System.out.println("containsKey(\"Hien\") took " + duration + " nano seconds.");
+    
+/*    	long startTime2 = System.nanoTime();
+    	scht.containsKey("Henry");
+    	long endTime2 = System.nanoTime();
+    	
+    	long duration2 = (endTime2 - startTime2);
+    	System.out.println("containsKey(\"Henry\") took " + duration2 + " nano seconds.");
+*/
+    	assertEquals(4,scht.size());
+    	/* * * Test get(...) * * */
+    	// Test for null input
+    	try {
+    		assertEquals(new Probes(null,0), scht.get(null));
+    	} catch(NullPointerException e) {}
+    	// Test for existent key
+    	assertEquals(new Probes("893-59-0011",2), scht.get("Hien"));
+    	// Test for nonexistent key
+    	try {
+    		assertEquals(new Probes(null,1), scht.get("Zeus"));
+    		assertEquals(new Probes(null,2), scht.get("Long"));
+    	} catch(NullPointerException e) {}
+
+    	/* * * Test remove(...) * * */
+    	String[] names = new String[] 
+    			{"Albus","Charlina","Severus",
+    			 "Hermoine","Ne-Yo","Y"};
+    	for (int i = 0; i < names.length; i++) {
+    		scht.enlarge();
+    		scht.put(names[i], "893-59-0011");
+    	}
+    	scht.remove("Y");
+    	scht.remove("Esther");
+    	assertEquals(8,scht.size());
     }
+    
+    @Test
+    public void testLinearProbingHashTable() {
+    	LinearProbingHashTable lp = new LinearProbingHashTable(false);
+    	
+    	lp.put("Henry", "893-393-5689");
+    	assertEquals(1,lp.size());
+    	String[] names = new String[] 
+    			{"Arnold","Jessie","Tiffany",
+    			 "Jerry","Nial","Jason"
+    			 };
+    	for (int i = 0; i < names.length; i++) {
+    		lp.put(names[i], "893-59-0011");
+    	}
+    	lp.remove("Arnold");
+    	lp.remove("Vlad");
+
+    	assertEquals(new Probes("893-59-0011", 1), lp.put("Cassandra", "893-59-0011"));
+    }
+    
+    @Test
+    public void testMyStressTest() {
+    	LinearProbingHashTable lp = new LinearProbingHashTable(false);
+    	
+    	/* Majority of program below derived from:
+    	 * https://stackoverflow.com/questions/20536566/creating-a-random-string-with-a-z-and-0-9-in-java
+    	 * Purpose:
+    	 * To generate random strings to add to hash table
+    	 * Other notes:
+    	 * I added a for-loop and array to store random strings in array names
+    	 */ 
+    	String saltStr = "";
+        for (int i = 0; i < 100; i++) {
+        	String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+            StringBuilder salt = new StringBuilder();
+            Random rnd = new Random();
+            
+        	while (salt.length() < 10) { // length of the random string.
+        		int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+        		salt.append(SALTCHARS.charAt(index));
+        	}
+        	saltStr = salt.toString();      	
+        	lp.put(saltStr, saltStr);
+        }
+        lp.remove(saltStr);      
+    }
+    
+    
     
 
 
